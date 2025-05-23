@@ -48,20 +48,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String jwt = getJwtFromRequest(request);
-            log.info("Processing request to: {}", request.getRequestURI());
 
-            if (jwt != null) {
-                log.info("Found JWT token");
+            if (StringUtils.hasText(jwt) && jwtTokenUtil.validateAccessToken(jwt)) {
+                Authentication authentication = jwtTokenUtil.getAuthentication(jwt);
 
-                if (jwtTokenUtil.validateAccessToken(jwt)) {
-                    log.info("JWT token is valid");
-                    Authentication authentication = jwtTokenUtil.getAuthentication(jwt);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                } else {
-                    log.info("JWT token is invalid");
-                    //setErrorAttributes(request, JwtErrorType.TOKEN_INVALID);
-                    //SecurityContextHolder.clearContext();
-                }
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                log.debug("Установлена аутентификация в SecurityContext для '{}', url: {}",
+                        authentication.getName(), request.getRequestURL());
             }
         } catch (JwtAuthenticationException e) {
             log.error("JWT authentication error: {} - {}", e.getErrorType().getCode(), e.getMessage());
