@@ -8,6 +8,8 @@ import org.nurfet.springsecurity.dto.UserDto;
 import org.nurfet.springsecurity.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -44,9 +46,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logout(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        authService.logout(username);
+    public ResponseEntity<Map<String, Object>> logout() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        authService.logout(auth.getName());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

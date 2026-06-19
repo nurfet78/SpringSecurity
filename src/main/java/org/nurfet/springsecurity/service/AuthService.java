@@ -112,13 +112,8 @@ public class AuthService {
         if (userService.existsByUsername(registerDto.getUsername())) {
             throw new IllegalArgumentException("Имя пользователя уже используется");
         }
-        UserDto userDto = new UserDto();
-        userDto.setFirstName(registerDto.getFirstName());
-        userDto.setLastName(registerDto.getLastName());
-        userDto.setEmail(registerDto.getEmail());
-        userDto.setUsername(registerDto.getUsername());
-        userDto.setPassword(registerDto.getPassword());
-        userDto.setRoles(Collections.singleton("ROLE_USER"));
-        return userService.createUserFromDto(userDto);
+
+        return userService.createUser(registerDto);
+
     }
 }

@@ -1,5 +1,8 @@
 package org.nurfet.springsecurity.service;
 
+import org.nurfet.springsecurity.dto.ChangePasswordRequest;
+import org.nurfet.springsecurity.dto.RegisterDto;
+import org.nurfet.springsecurity.dto.UpdateUserDto;
 import org.nurfet.springsecurity.dto.UserDto;
 import org.nurfet.springsecurity.model.User;
 
@@ -8,36 +11,15 @@ import java.util.List;
 public interface UserService {
 
     List<UserDto> findAllUsers();
-
     UserDto findUserDtoById(Long id);
-
-    UserDto createUserFromDto(UserDto userDto);
-
-    UserDto updateUserFromDto(UserDto userDto);
-
+    UserDto createUser(RegisterDto dto);
+    UserDto updateUser(Long id, UpdateUserDto dto);
+    void changePassword(Long userId, ChangePasswordRequest request);
     void deleteUserById(Long id);
-
     boolean existsByUsername(String username);
-
+    boolean isUsernameTakenByOther(Long userId, String username);
     User findByUsername(String username);
-
     UserDto userToUserDto(User user);
-
-    boolean validateUSerData(UserDto userDto);
-
-    /**
-     * Добавить роль пользователю
-     * @param userId идентификатор пользователя
-     * @param roleName название роли
-     * @return обновленный пользователь в виде DTO
-     */
     UserDto addRoleToUser(Long userId, String roleName);
-
-    /**
-     * Удалить роль у пользователя
-     * @param userId идентификатор пользователя
-     * @param roleName название роли
-     * @return обновленный пользователь в виде DTO
-     */
     UserDto removeRoleFromUser(Long userId, String roleName);
 }

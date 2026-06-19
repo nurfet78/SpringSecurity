@@ -8,14 +8,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.HashSet;
 import java.util.Set;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-public class RegisterDto {
+@AllArgsConstructor
+public class UpdateUserDto {
 
     @Size(min = 2, max = 30, message = "Имя должно содержать от 2 до 30 символов")
     @NotBlank(message = "Имя должно быть указано")
@@ -33,7 +32,5 @@ public class RegisterDto {
     @NotBlank(message = "Имя пользователя не должно быть пустым")
     private String username;
 
-    @Size(min = 4, max = 16, message = "Пароль должен содержать от 4 до 16 символов")
-    @NotBlank(message = "Пароль не должен быть пустым")
-    private String password;
+    private Set<String> roles;
 }

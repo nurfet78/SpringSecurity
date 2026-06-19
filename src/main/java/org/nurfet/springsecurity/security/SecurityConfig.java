@@ -53,7 +53,6 @@ public class SecurityConfig {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("default-src 'self'; script-src 'self'"))
-                        .cacheControl(Customizer.withDefaults())
                 // Cross-Origin политики (опционально, для высокого уровня безопасности)
                         .crossOriginResourcePolicy(corp ->
                                 corp.policy(CrossOriginResourcePolicy.SAME_ORIGIN))
@@ -64,7 +63,7 @@ public class SecurityConfig {
                 // Настраиваем авторизацию запросов
                 .authorizeHttpRequests(auth -> auth
                         // Публичные эндпоинты
-                        .requestMatchers("/api/auth/**").permitAll()  // Разрешаем доступ ко всем эндпоинтам аутентификации
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
 
                         // Эндпоинты администратора

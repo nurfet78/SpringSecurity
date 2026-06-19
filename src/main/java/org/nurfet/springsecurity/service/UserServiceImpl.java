@@ -1,6 +1,9 @@
 package org.nurfet.springsecurity.service;
 
 import lombok.RequiredArgsConstructor;
+import org.nurfet.springsecurity.dto.ChangePasswordRequest;
+import org.nurfet.springsecurity.dto.RegisterDto;
+import org.nurfet.springsecurity.dto.UpdateUserDto;
 import org.nurfet.springsecurity.dto.UserDto;
 import org.nurfet.springsecurity.exception.NotFoundException;
 import org.nurfet.springsecurity.model.Role;
@@ -19,11 +22,8 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-
     private final RoleRepository roleRepository;
-
     private final PasswordEncoder passwordEncoder;
-
 
     @Override
     @Transactional(readOnly = true)
@@ -33,27 +33,60 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
-    private User findUserById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new NotFoundException(User.class, id));
-    }
-
     @Override
+    @Transactional(readOnly = true)
     public UserDto findUserDtoById(Long id) {
         return userToUserDto(findUserById(id));
     }
 
     @Override
     @Transactional
-    public UserDto createUserFromDto(UserDto userDto) {
-        User user = getUser(userDto, new User());
-        return userToUserDto(user);
+    public UserDto createUser(RegisterDto dto) {
+        User user = new User();
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setEmail(dto.getEmail());
+        user.setUsername(dto.getUsername());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+
+        Role defaultRole = getOrCreateRole("ROLE_USER");
+        user.addRole(defaultRole);
+
+        return userToUserDto(userRepository.save(user));
     }
 
     @Override
     @Transactional
-    public UserDto updateUserFromDto(UserDto userDto) {
-        User user = getUser(userDto, findUserById(userDto.getId()));
-        return userToUserDto(user);
+    public UserDto updateUser(Long id, UpdateUserDto dto) {
+        User user = findUserById(id);
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setEmail(dto.getEmail());
+        user.setUsername(dto.getUsername());
+
+        if (dto.getRoles() != null && !dto.getRoles().isEmpty()) {
+            user.removeRole();
+            dto.getRoles().forEach(roleName -> user.addRole(getOrCreateRole(roleName)));
+        }
+
+        return userToUserDto(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Пароли не совпадают");
+        }
+
+        User user = findUserById(userId);
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Текущий пароль указан неверно");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     @Override
@@ -68,62 +101,41 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean isUsernameTakenByOther(Long userId, String newUsername) {
+        User existing = findUserById(userId);
+        return !existing.getUsername().equals(newUsername) && existsByUsername(newUsername);
+    }
+
+    @Override
     public User findByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow(() -> new NotFoundException(
-                String.format("Имя пользователя %s не найдено", username)));
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с именем '%s' не найден", username)));
     }
 
     @Override
     public UserDto userToUserDto(User user) {
-        return new UserDto(
-                user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getUsername(),
-                user.getRoles().stream().map(Role::getAuthority).collect(Collectors.toSet()));
-    }
-
-    @Override
-    public boolean validateUSerData(UserDto userDto) {
-        User existingUser = findUserById(userDto.getId());
-        String newUsername = userDto.getUsername();
-
-        return existingUser.getUsername().equals(newUsername) || !existsByUsername(newUsername);
-    }
-
-    private Role getOrCreateRole(String roleName) {
-        return roleRepository.findRoleByAuthority(roleName).orElseGet(() -> roleRepository.save(new Role(roleName)));
-    }
-
-    private User getUser(UserDto userDto, User user) {
-        user.setFirstName(userDto.getFirstName());
-        user.setLastName(userDto.getLastName());
-        user.setEmail(userDto.getEmail());
-        user.setUsername(userDto.getUsername());
-
-        if(userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
-        }
-
-        user.removeRole();
-        for (String roleName : userDto.getRoles()) {
-            Role role = getOrCreateRole(roleName);
-            user.addRole(role);
-        }
-
-        return userRepository.save(user);
+        return UserDto.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .username(user.getUsername())
+                .roles(user.getRoles().stream()
+                        .map(Role::getAuthority)
+                        .collect(Collectors.toSet()))
+                .build();
     }
 
     @Override
     @Transactional
     public UserDto addRoleToUser(Long userId, String roleName) {
         User user = findUserById(userId);
-        Role role = getOrCreateRole(roleName);
+        boolean alreadyHasRole = user.getRoles().stream()
+                .anyMatch(r -> r.getAuthority().equals(roleName));
 
-        // Проверяем, есть ли уже такая роль у пользователя
-        if (user.getRoles().stream().noneMatch(r -> r.getAuthority().equals(roleName))) {
-            user.addRole(role);
+        if (!alreadyHasRole) {
+            user.addRole(getOrCreateRole(roleName));
             userRepository.save(user);
         }
 
@@ -135,18 +147,25 @@ public class UserServiceImpl implements UserService {
     public UserDto removeRoleFromUser(Long userId, String roleName) {
         User user = findUserById(userId);
 
-        // Находим роль, которую нужно удалить
         user.getRoles().stream()
                 .filter(role -> role.getAuthority().equals(roleName))
                 .findFirst()
                 .ifPresent(user::removeRole);
 
-        // Проверяем, что у пользователя осталась хотя бы одна роль
         if (user.getRoles().isEmpty()) {
             throw new IllegalArgumentException("Пользователь должен иметь хотя бы одну роль");
         }
 
-        userRepository.save(user);
-        return userToUserDto(user);
+        return userToUserDto(userRepository.save(user));
+    }
+
+    private User findUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(User.class, id));
+    }
+
+    private Role getOrCreateRole(String roleName) {
+        return roleRepository.findRoleByAuthority(roleName)
+                .orElseGet(() -> roleRepository.save(new Role(roleName)));
     }
 }
