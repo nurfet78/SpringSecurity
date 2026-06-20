@@ -1,10 +1,7 @@
 package org.nurfet.springsecurity.service;
 
 import lombok.RequiredArgsConstructor;
-import org.nurfet.springsecurity.dto.ChangePasswordRequest;
-import org.nurfet.springsecurity.dto.RegisterDto;
-import org.nurfet.springsecurity.dto.UpdateUserDto;
-import org.nurfet.springsecurity.dto.UserDto;
+import org.nurfet.springsecurity.dto.*;
 import org.nurfet.springsecurity.exception.NotFoundException;
 import org.nurfet.springsecurity.model.Role;
 import org.nurfet.springsecurity.model.User;
@@ -14,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,7 +47,7 @@ public class UserServiceImpl implements UserService {
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-        Role defaultRole = getOrCreateRole("ROLE_USER");
+        Role defaultRole = getOrCreateRole(RoleName.ROLE_USER.name());
         user.addRole(defaultRole);
 
         return userToUserDto(userRepository.save(user));
@@ -64,7 +62,10 @@ public class UserServiceImpl implements UserService {
         user.setEmail(dto.getEmail());
         user.setUsername(dto.getUsername());
 
-        if (dto.getRoles() != null && !dto.getRoles().isEmpty()) {
+        if (dto.getRoles() != null) {
+            if (dto.getRoles().isEmpty()) {
+                throw new IllegalArgumentException("Пользователь должен иметь хотя бы одну роль");
+            }
             user.removeRole();
             dto.getRoles().forEach(roleName -> user.addRole(getOrCreateRole(roleName)));
         }
@@ -165,6 +166,11 @@ public class UserServiceImpl implements UserService {
     }
 
     private Role getOrCreateRole(String roleName) {
+        if (!RoleName.isValid(roleName)) {
+            throw new IllegalArgumentException(
+                    "Недопустимое имя роли: " + roleName +
+                            ". Разрешены: " + Arrays.toString(RoleName.values()));
+        }
         return roleRepository.findRoleByAuthority(roleName)
                 .orElseGet(() -> roleRepository.save(new Role(roleName)));
     }

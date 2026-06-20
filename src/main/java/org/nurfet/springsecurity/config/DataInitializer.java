@@ -1,6 +1,7 @@
 package org.nurfet.springsecurity.config;
 
 import lombok.RequiredArgsConstructor;
+import org.nurfet.springsecurity.dto.RoleName;
 import org.nurfet.springsecurity.model.Role;
 import org.nurfet.springsecurity.model.User;
 import org.nurfet.springsecurity.repository.RoleRepository;
@@ -25,8 +26,8 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        Role roleAdmin = addRole("ROLE_ADMIN");
-        Role roleUser = addRole("ROLE_USER");
+        Role roleAdmin = addRole(RoleName.ROLE_ADMIN.name());
+        Role roleUser = addRole(RoleName.ROLE_USER.name());
 
         addDefaultUser("Александр", "Александров", "alex@mail.ru",
                 "admin", roleAdmin, roleUser);

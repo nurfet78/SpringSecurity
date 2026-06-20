@@ -1,6 +1,7 @@
 package org.nurfet.springsecurity.security;
 
 import lombok.RequiredArgsConstructor;
+import org.nurfet.springsecurity.dto.RoleName;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -64,16 +65,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Публичные эндпоинты
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/login").permitAll()
 
                         // Эндпоинты администратора
-                        .requestMatchers(HttpMethod.GET, "/admin/users", "/admin/users/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/admin/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/admin/users/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/admin/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/users", "/admin/users/**").hasAuthority(RoleName.ROLE_ADMIN.name())
+                        .requestMatchers(HttpMethod.POST, "/admin/users").hasAuthority(RoleName.ROLE_ADMIN.name())
+                        .requestMatchers(HttpMethod.PUT, "/admin/users/**").hasAuthority(RoleName.ROLE_ADMIN.name())
+                        .requestMatchers(HttpMethod.DELETE, "/admin/users/**").hasAuthority(RoleName.ROLE_ADMIN.name())
 
                         // Эндпоинты пользователя
-                        .requestMatchers("/user").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/user", "/user/**").hasAnyAuthority(RoleName.ROLE_USER.name(), RoleName.ROLE_ADMIN.name())
 
                         // Все остальные запросы требуют аутентификации
                         .anyRequest().authenticated()
